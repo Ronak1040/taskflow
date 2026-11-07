@@ -12,7 +12,9 @@ export async function connectDB(): Promise<typeof mongoose> {
     try {
       logger.info('USE_IN_MEMORY_DB is enabled. Initializing MongoMemoryServer...');
       const { MongoMemoryServer } = await import('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
+      const mongod = await MongoMemoryServer.create({
+        instance: { launchTimeout: 30000 },
+      });
       memoryServer = mongod;
       const uri = mongod.getUri();
       logger.info(`MongoMemoryServer started at ${uri}`);
@@ -42,7 +44,9 @@ export async function connectDB(): Promise<typeof mongoose> {
       try {
         logger.warn('Falling back to In-Memory MongoDB for local development...');
         const { MongoMemoryServer } = await import('mongodb-memory-server');
-        const mongod = await MongoMemoryServer.create();
+        const mongod = await MongoMemoryServer.create({
+          instance: { launchTimeout: 30000 },
+        });
         memoryServer = mongod;
         const uri = mongod.getUri();
         logger.info(`MongoMemoryServer started at ${uri}`);

@@ -311,6 +311,100 @@ TaskFlow features complete end-to-end integration between the React 19 frontend 
 
 ---
 
+## 🛡️ Quality Assurance, Automated Testing & Security Review (PROMPT 06)
+
+TaskFlow includes an exhaustive automated test battery across backend APIs and frontend UI components, accompanied by a comprehensive security audit and code quality pipeline.
+
+### 1. Test Architecture & Framework Setup
+- **Backend Testing Framework**: Vitest + Supertest + MongoMemoryServer (isolated ephemeral in-memory database).
+- **Frontend Testing Framework**: Vitest + React Testing Library + JSDOM + `@testing-library/jest-dom`.
+- **Linter & Code Quality**: ESLint 9 (Flat Config) + `@typescript-eslint` + Strict TypeScript (`tsc`).
+
+### 2. Automated Test Battery Matrix (67 Tests, 100% Passing)
+
+#### A. Backend QA & Security Test Battery (`npm run test:qa:server` / `backend.qa.spec.ts`)
+| ID | Area | Scenario | Expected Result | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | Auth | Successful user registration | Returns 201, sets `httpOnly` cookie, excludes password hash | **PASS** |
+| 2 | Auth | Prevent duplicate email registration | Returns 409 Conflict with informative error | **PASS** |
+| 3 | Auth | Reject invalid email format | Returns 400 Bad Request via Zod email validation | **PASS** |
+| 4 | Auth | Reject weak passwords | Returns 400 Bad Request (enforces 8+ chars, upper, lower, number) | **PASS** |
+| 5 | Auth | Successful login with valid credentials | Returns 200 OK and establishes authenticated session cookie | **PASS** |
+| 6 | Auth | Reject invalid password | Returns 401 Unauthorized with anti-enumeration message | **PASS** |
+| 7 | Auth | Missing authentication on protected route | Returns 401 Unauthorized | **PASS** |
+| 8 | Auth | Reject invalid and expired tokens | Returns 401 Unauthorized for malformed or expired JWTs | **PASS** |
+| 9 | Auth | Logout clears session cookie | Returns 200 OK and clears `taskflow_token` cookie | **PASS** |
+| 10 | Tasks | Create task with full metadata | Returns 201 Created and associates task with authenticated user | **PASS** |
+| 11 | Tasks | Get tasks with pagination | Returns 200 OK with paginated array and accurate metadata | **PASS** |
+| 12 | Tasks | Get task by ID | Returns 200 OK with single task document | **PASS** |
+| 13 | Tasks | Update task via PUT | Returns 200 OK with updated attributes persisted | **PASS** |
+| 14 | Tasks | Delete task removes from database | Returns 200 OK; subsequent fetch returns 404 Not Found | **PASS** |
+| 15 | Tasks | Reject invalid MongoDB ObjectId format | Returns 400 Bad Request on invalid 24-hex string | **PASS** |
+| 16 | Tasks | Reject invalid task payload data | Returns 400 Bad Request on empty title or invalid enum | **PASS** |
+| 17 | Tasks | Unauthorized task access without session | Returns 401 Unauthorized | **PASS** |
+| 18 | Tasks | Strict cross-user task access isolation | User B attempting to read, update, or delete User A's task returns 404 | **PASS** |
+| 19 | Tasks | Search and filter synergy | Search, status, and priority query filters execute concurrently | **PASS** |
+| 20 | Tasks | Pagination metadata boundaries | Verifies `page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage` | **PASS** |
+| 21 | Dashboard | Dashboard statistics aggregation | Correctly aggregates total, pending, in-progress, completed, and overdue | **PASS** |
+
+#### B. Frontend QA & Interaction Test Battery (`npm run test:qa:client` / `frontend.qa.spec.tsx`)
+| ID | Component / Area | Scenario | Expected Result | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `LoginPage` | Form field rendering | Email, password, and submit button rendered with accessibility labels | **PASS** |
+| 2 | `LoginPage` | Empty inputs validation | Rejects submission and displays error message | **PASS** |
+| 3 | `LoginPage` | Valid submission | Triggers `authService.login` with sanitized credentials | **PASS** |
+| 4 | `RegisterPage` | Password security & match rules | Enforces complexity and password mismatch verification | **PASS** |
+| 5 | `ProtectedRoute` | Unauthenticated route guard | Redirects unauthenticated users from `/dashboard` to `/login` | **PASS** |
+| 6 | `ProtectedRoute` | Authenticated route access | Allows authenticated users to view protected views | **PASS** |
+| 7 | `PublicRoute` | Public route reverse guard | Redirects authenticated users from `/login` to `/dashboard` | **PASS** |
+| 8 | `TaskModal` | Client-side validation | Enforces required title and character limits before submit | **PASS** |
+| 9 | `TaskModal` | Edit pre-population & submission | Pre-fills existing task attributes and submits updated payload | **PASS** |
+| 10 | `ConfirmDialog` | Destructive action confirmation | Supports cancellation and triggers callback on confirmation | **PASS** |
+| 11 | `LoadingState` | Loading state variants | Renders skeleton card grids and spinner modes | **PASS** |
+| 12 | `EmptyState` | Empty state & CTA | Displays contextual illustration, copy, and action button | **PASS** |
+
+#### C. Standalone End-to-End & REST Suites (`npm test`)
+- **Authentication Standalone Suite** (`auth.test.ts`): 9 / 9 passed.
+- **Task Management REST Suite** (`task.test.ts`): 15 / 15 passed.
+- **Full-Stack Workflow E2E Suite** (`e2e.integration.test.ts`): 10 / 10 passed.
+
+---
+
+### 3. Comprehensive Security Review Summary
+
+| Security Domain | Implementation Details | Verdict |
+| :--- | :--- | :--- |
+| **Password Hashing** | Bcrypt with 12 salt rounds; pre-save hooks prevent double hashing | **SECURE** |
+| **Token Handling** | JWT with HS256, 7-day expiration, signed with secret from env | **SECURE** |
+| **Cookie Security** | `httpOnly: true`, `sameSite: 'lax'`, `secure: true` in production | **SECURE** |
+| **CSRF Defense** | Enforces `X-Requested-With: XMLHttpRequest` and Origin header checks | **SECURE** |
+| **CORS Policy** | Restricted to authorized frontend origins (`CLIENT_URL`); rejects arbitrary origins | **SECURE** |
+| **Tenant Isolation** | Every database operation strictly scopes `userId` from verified JWT identity | **SECURE** |
+| **Input Validation** | Strict Zod schemas sanitize all request bodies, params, and query strings | **SECURE** |
+| **Anti-Enumeration** | Identical generic error message (`Invalid email or password`) on failed logins | **SECURE** |
+| **Information Leakage** | Password hashes stripped via `toJSON` transform; zero sensitive data in responses | **SECURE** |
+| **Rate Limiting** | Tiered rate limiters protect auth endpoints from brute-force attempts | **SECURE** |
+
+---
+
+### 4. Code Quality & Build Verification Commands
+
+```bash
+# 1. Run strict TypeScript typecheck (zero errors)
+npm run typecheck
+
+# 2. Run ESLint across frontend and backend (zero errors)
+npm run lint
+
+# 3. Run full automated test battery (67 / 67 passing)
+npm run test:all
+
+# 4. Run production builds for server and client
+npm run build
+```
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Install Dependencies
