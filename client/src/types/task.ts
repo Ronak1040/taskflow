@@ -46,3 +46,4 @@ export interface DashboardStats {
   completed: number;
   overdue: number;
 }
+

@@ -94,3 +94,4 @@ taskSchema.index({ userId: 1, status: 1, dueDate: 1 });
 taskSchema.index({ userId: 1, title: 1 });
 
 export const Task = model<ITask>('Task', taskSchema);
+

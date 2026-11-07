@@ -11,3 +11,4 @@ router.use(authenticate);
 router.get('/stats', getDashboardStats);
 
 export const dashboardRoutes = router;
+

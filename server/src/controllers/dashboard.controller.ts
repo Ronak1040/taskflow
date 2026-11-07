@@ -12,3 +12,4 @@ export const getDashboardStats = asyncHandler(async (req: Request, res: Response
   const stats = await DashboardService.getStats(req.user.id);
   return ApiResponse.success(res, { stats }, 'Dashboard statistics retrieved successfully');
 });
+

@@ -11,14 +11,17 @@ taskflow/
 ├── client/                     # Frontend Application (React 19 + Vite + Tailwind CSS)
 │   ├── public/                 # Static assets
 │   ├── src/
-│   │   ├── components/         # Reusable atomic UI & auth components
+│   │   ├── components/         # Reusable atomic UI & domain components
 │   │   │   ├── auth/           # ProtectedRoute component
-│   │   │   └── common/         # Button, Card, Badge, Header, Footer
+│   │   │   ├── common/         # Button, Card, Badge, Header, Footer, StatCard, SearchBar, FilterDropdown,
+│   │   │   │                   # StatusBadge, PriorityBadge, EmptyState, LoadingState, ConfirmDialog
+│   │   │   ├── layout/         # AppHeader, Sidebar (collapsible SaaS navigation)
+│   │   │   └── tasks/          # TaskCard, TaskTable, TaskModal (create/edit form)
 │   │   ├── contexts/           # React context providers (AuthContext, ThemeContext)
 │   │   ├── hooks/              # Custom reactive hooks (useHealth for live system telemetry)
-│   │   ├── layouts/            # Application shells and root routing layouts (RootLayout)
-│   │   ├── pages/              # View pages (HomePage, LoginPage, RegisterPage, DashboardPage, HealthCheckPage, NotFoundPage)
-│   │   ├── routes/             # React Router v7 configuration
+│   │   ├── layouts/            # Application shells (RootLayout for public/auth, AppLayout for workspace)
+│   │   ├── pages/              # View pages (HomePage, LoginPage, RegisterPage, DashboardPage, TasksPage, HealthCheckPage, NotFoundPage)
+│   │   ├── routes/             # React Router v7 configuration with protected app routes
 │   │   ├── services/           # Centralized Axios client (apiClient, authService, taskService, dashboardService)
 │   │   ├── types/              # Strict TypeScript definitions for domain, task, and API models
 │   │   ├── utils/              # Pure utility functions (formatting, class mergers)
@@ -198,6 +201,63 @@ npm run test
  Total: 9 | Passed: 9 | Failed: 0
 ====================================================
 ```
+
+---
+
+## 🎨 Modern SaaS Frontend UI Architecture (PROMPT 04)
+
+TaskFlow features a clean, responsive, SaaS-style user interface built with React 19, Tailwind CSS, TypeScript, and Lucide React icons. It connects directly to the real backend APIs created in Prompts 01–03.
+
+### 1. Design Direction & Aesthetic Guidelines
+- **Modern SaaS Dashboard**: Minimalist, professional interface optimized for task readability and operational velocity.
+- **Palette & Typography**: Light slate background (`bg-slate-50`), crisp white surface cards (`bg-white`), dark navy text (`text-slate-900`), and dark mode support (`dark:bg-slate-950`).
+- **Surfaces & Borders**: Subtle borders (`border-slate-200/80`), gentle soft shadows (`shadow-2xs`, `shadow-xs`), and rounded containers (`rounded-xl`, `rounded-2xl`).
+- **No Gradients / Clutter**: Zero unnecessary animations or garish gradients; focused strictly on UX clarity, accessibility, and high information density.
+
+---
+
+### 2. Page Directory & Features
+
+| Route | Page Component | Access | Key Features |
+| :--- | :--- | :--- | :--- |
+| `/login` | `LoginPage` | Public | Email and password authentication, inline validation, loading states, direct redirect to `/dashboard`. |
+| `/register` | `RegisterPage` | Public | Name, email, password, and password confirmation with client-side match validation. |
+| `/dashboard` | `DashboardPage` | Authenticated | Live stats cards (Total, In Progress, Pending, Completed, Overdue), sprint progress metric, recent tasks feed, upcoming deadlines list, quick-complete action. |
+| `/tasks` | `TasksPage` | Authenticated | Multi-view task management (Data Table vs Grid Cards), debounced search, status filter, priority filter, sort by due date / title / priority / created date, pagination, create/edit modal, delete confirmation. |
+| `/health` | `HealthCheckPage` | Public | Live backend connectivity and system telemetry monitor. |
+
+---
+
+### 3. Modular Reusable UI Components
+
+Located in [`client/src/components/`](file:///d:/TaskFlow/client/src/components):
+
+- **Layout Components**:
+  - `AppLayout`: SaaS layout shell integrating collapsible sidebar, app header, global task modal, and toasts.
+  - `Sidebar`: Collapsible sidebar navigation with active route highlights, team/workspace badge, user profile drawer, and quick logout.
+  - `AppHeader`: Header featuring hamburger toggle, dynamic page titles, theme toggle, and "+ New Task" trigger.
+- **Data & Metric Displays**:
+  - `StatCard`: KPI card displaying metric value, icon pill, and descriptive trend subtitle.
+  - `StatusBadge`: Semantic status pills with icons (`pending` = amber, `in-progress` = sky, `completed` = emerald).
+  - `PriorityBadge`: Indicator with colored dot (`low` = slate, `medium` = amber, `high` = rose).
+- **Task Management Components**:
+  - `TaskCard`: Visual card view with status dropdown, overdue indicators, formatted dates, and action menus.
+  - `TaskTable`: High-density responsive data table with column headers, formatted timestamps, and inline action buttons.
+  - `TaskModal`: Accessible modal dialog for creating and editing tasks with real-time validation and ISO date conversion.
+  - `ConfirmDialog`: Danger-themed confirmation dialog protecting against accidental task deletions.
+- **Filter & Search Controls**:
+  - `SearchBar`: Responsive search input with Lucide search icon and instant clear button.
+  - `FilterDropdown`: Generalized select dropdown for status, priority, and sort options.
+- **State Fallbacks**:
+  - `LoadingState`: Dual-mode skeleton card grid or spinner loading indicators.
+  - `EmptyState`: Contextual illustration and messaging with action call-to-action button.
+
+---
+
+### 4. Client-Side API Integration & State Synchronization
+- **Zero Mock Statistics**: Dashboard metrics and task lists are fetched live from `GET /api/dashboard/stats` and `GET /api/tasks`.
+- **Global Event Synchronization**: Quick-task creation from the top header dispatches a lightweight custom event (`taskflow:task-created`), automatically updating active views and statistics without requiring a page refresh.
+- **Secure Sessions**: Token handling is purely cookie-based with `withCredentials: true`; no JWTs are saved in `localStorage` or `sessionStorage`.
 
 ---
 

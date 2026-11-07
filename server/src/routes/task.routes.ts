@@ -49,3 +49,4 @@ router.patch(
 router.delete('/:id', validate({ params: taskIdParamSchema }), deleteTask);
 
 export const taskRoutes = router;
+
