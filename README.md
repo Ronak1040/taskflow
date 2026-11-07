@@ -1,6 +1,6 @@
 # TaskFlow — Modern Production-Grade Task Management Platform
 
-TaskFlow is an enterprise-ready, full-stack TypeScript task management application. This repository is configured as a monorepo containing a Vite-powered React 19 frontend and an Express.js layered backend with Mongoose/MongoDB connectivity, strict type safety, secure HTTP-only cookie authentication, centralized error handling, and runtime diagnostics.
+TaskFlow is an enterprise-ready, full-stack TypeScript task management application. This repository is configured as a monorepo containing a Vite-powered React 19 frontend and an Express.js layered backend with Mongoose/MongoDB connectivity, strict type safety, secure HTTP-only cookie authentication, centralized error handling, and complete task management REST APIs.
 
 ---
 
@@ -19,8 +19,8 @@ taskflow/
 │   │   ├── layouts/            # Application shells and root routing layouts (RootLayout)
 │   │   ├── pages/              # View pages (HomePage, LoginPage, RegisterPage, DashboardPage, HealthCheckPage, NotFoundPage)
 │   │   ├── routes/             # React Router v7 configuration
-│   │   ├── services/           # Centralized Axios client with withCredentials & authService
-│   │   ├── types/              # Strict TypeScript definitions for domain and API models
+│   │   ├── services/           # Centralized Axios client (apiClient, authService, taskService, dashboardService)
+│   │   ├── types/              # Strict TypeScript definitions for domain, task, and API models
 │   │   ├── utils/              # Pure utility functions (formatting, class mergers)
 │   │   ├── App.tsx             # Root component with AuthProvider & ThemeProvider
 │   │   ├── index.css           # Tailwind CSS directives and root theme variables
@@ -37,15 +37,15 @@ taskflow/
 ├── server/                     # Backend Application (Node.js + Express + TypeScript)
 │   ├── src/
 │   │   ├── config/             # Zod-validated environment config and Mongoose database connector
-│   │   ├── controllers/        # Request/response handlers (auth.controller, health.controller)
+│   │   ├── controllers/        # Request/response handlers (auth.controller, task.controller, dashboard.controller, health.controller)
 │   │   ├── middleware/         # Express middleware (auth, csrf, rateLimit, error, notFound, logger, validate)
-│   │   ├── models/             # Mongoose schemas with pre-save hooks (user.model)
-│   │   ├── routes/             # REST route declarations (auth.routes, health.routes, index)
-│   │   ├── services/           # Decoupled business logic (auth.service, health.service)
-│   │   ├── tests/              # Automated test suite (auth.test.ts)
+│   │   ├── models/             # Mongoose schemas with pre-save hooks & indexes (user.model, task.model)
+│   │   ├── routes/             # REST route declarations (auth.routes, task.routes, dashboard.routes, health.routes, index)
+│   │   ├── services/           # Decoupled business logic (auth.service, task.service, dashboard.service, health.service)
+│   │   ├── tests/              # Automated integration test suites (auth.test.ts, task.test.ts)
 │   │   ├── types/              # Server-side TypeScript interfaces and Express augmentations
 │   │   ├── utils/              # Cookie helpers, AppError, asyncHandler, logger, apiResponse
-│   │   ├── validators/         # Zod request validation schemas (auth.validator)
+│   │   ├── validators/         # Zod request validation schemas (auth.validator, task.validator)
 │   │   ├── app.ts              # Express application factory with middleware pipeline
 │   │   └── index.ts            # Entry point establishing DB and listening on HTTP port
 │   ├── .env.example            # Server environment variables blueprint
@@ -60,39 +60,127 @@ taskflow/
 
 ---
 
-## 🔐 Complete Authentication System (PROMPT 02)
+## 📋 Task Management Module (PROMPT 03)
 
-TaskFlow implements a robust, enterprise-grade authentication system adhering to OWASP recommendations:
+### 1. Task Model & Indexes
+Located at [`server/src/models/task.model.ts`](file:///d:/TaskFlow/server/src/models/task.model.ts):
+- `title`: string (required, 1-200 chars, trimmed)
+- `description`: string (optional, up to 2000 chars, default: `''`)
+- `status`: `'pending' | 'in-progress' | 'completed'` (default: `'pending'`, indexed)
+- `priority`: `'low' | 'medium' | 'high'` (default: `'medium'`, indexed)
+- `dueDate`: Date (optional, indexed)
+- `userId`: ObjectId reference to `User` (required, indexed)
+- `createdAt` & `updatedAt`: Timestamps
 
-### 1. Security & Storage Design
-- **Zero Client Token Storage**: JWT is **never** stored in `localStorage` or `sessionStorage`, eliminating exposure to Cross-Site Scripting (XSS) token theft.
-- **HTTP-Only Cookies**: Tokens are issued via standard `Set-Cookie` with:
-  - `httpOnly: true` (inaccessible to browser JavaScript)
-  - `secure: true` in production (enforced over HTTPS)
-  - `sameSite: 'lax'` (prevents cross-site cookie leakage on third-party origins)
-  - `maxAge: 7 days`
-- **CSRF Mitigation**: Custom `X-Requested-With: XMLHttpRequest` header check coupled with Origin validation for state-changing HTTP methods.
-- **Brute-Force Rate Limiting**: `express-rate-limit` throttles authentication endpoints (`/api/auth/register` and `/api/auth/login`) to 20 attempts per 15 minutes per IP.
-- **User Enumeration Prevention**: Consistent generic error responses (`"Invalid email or password."`) on login failures whether the email exists or not.
-- **Salted Password Hashing**: Passwords hashed using `bcryptjs` with 12 salt rounds in a Mongoose pre-save hook.
-- **Sensitive Field Protection**: Password hashes are stripped via `select: false` on the User schema and sanitized during JSON serialization.
-
-### 2. API Contract Specification
-
-| Method | Endpoint | Description | Auth Required | Request Body | Response Envelope |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Registers a new user account & sets HTTP-only cookie | No | `{ name, email, password }` | `{ success: true, data: { user } }` (201) |
-| `POST` | `/api/auth/login` | Authenticates user & sets HTTP-only cookie | No | `{ email, password }` | `{ success: true, data: { user } }` (200) |
-| `POST` | `/api/auth/logout` | Clears authentication cookie | No | None | `{ success: true, message: "Logout successful" }` (200) |
-| `GET` | `/api/auth/me` | Fetches current user profile from cookie session | **Yes** | None | `{ success: true, data: { user } }` (200) |
-| `GET` | `/api/v1/health` | Health telemetry and MongoDB status | No | None | `{ success: true, data: { status, services, ... } }` (200) |
+**Compound Indexes for Optimal Query Performance:**
+```ts
+taskSchema.index({ userId: 1, createdAt: -1 });
+taskSchema.index({ userId: 1, status: 1 });
+taskSchema.index({ userId: 1, priority: 1 });
+taskSchema.index({ userId: 1, dueDate: 1 });
+taskSchema.index({ userId: 1, status: 1, dueDate: 1 });
+taskSchema.index({ userId: 1, title: 1 });
+```
 
 ---
 
-## 🧪 Automated Test Suite Results
+### 2. API Endpoint Specification
 
-A dedicated automated test suite (`server/src/tests/auth.test.ts`) verifies all authentication endpoints:
+All task and dashboard endpoints require authentication via HTTP-only cookie or Bearer token.
 
+| Method | Endpoint | Description | Request Parameters / Body | Response Status |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/api/tasks` | Create task | Body: `{ title, description?, status?, priority?, dueDate? }` | `201 Created` |
+| `GET` | `/api/tasks` | List tasks | Query: `search`, `status`, `priority`, `sortBy`, `order`, `page`, `limit` | `200 OK` + `meta` |
+| `GET` | `/api/tasks/:id` | Get task by ID | Params: `id` (24-hex ObjectId) | `200 OK` |
+| `PUT` | `/api/tasks/:id` | Edit task | Params: `id`, Body: `{ title?, description?, status?, priority?, dueDate? }` | `200 OK` |
+| `PATCH` | `/api/tasks/:id/status` | Update status | Params: `id`, Body: `{ status: 'pending' \| 'in-progress' \| 'completed' }` | `200 OK` |
+| `DELETE` | `/api/tasks/:id` | Delete task | Params: `id` (24-hex ObjectId) | `200 OK` |
+| `GET` | `/api/dashboard/stats` | Dashboard stats | None | `200 OK` |
+
+#### Example Query:
+```http
+GET /api/tasks?search=meeting&status=pending&priority=high&page=1&limit=10&sortBy=dueDate&order=asc
+```
+
+#### Pagination Metadata Envelope:
+```json
+{
+  "success": true,
+  "message": "Tasks retrieved successfully",
+  "data": { "tasks": [...] },
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 42,
+    "totalPages": 5,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  }
+}
+```
+
+#### Dashboard Statistics Payload (`GET /api/dashboard/stats`):
+```json
+{
+  "success": true,
+  "message": "Dashboard statistics retrieved successfully",
+  "data": {
+    "stats": {
+      "total": 24,
+      "pending": 10,
+      "inProgress": 8,
+      "completed": 6,
+      "overdue": 3
+    }
+  }
+}
+```
+
+---
+
+### 3. Security & Multi-Tenant Data Isolation
+
+1. **Authentication Enforcement**: Every task and dashboard route passes through [`auth.middleware.ts`](file:///d:/TaskFlow/server/src/middleware/auth.middleware.ts).
+2. **UserId Trust Boundary**: `userId` is strictly extracted from `req.user.id` (derived from the validated JWT signature). Any `userId` supplied in request bodies is discarded.
+3. **Cross-Tenant Isolation**: Queries and mutations explicitly enforce `{ _id: taskId, userId }`. If an authenticated user attempts to access, edit, or delete another user's task, the API responds with `404 Not Found`, completely preventing cross-user data leakage and ID enumeration.
+4. **Input Validation**: All IDs are validated using a 24-character hexadecimal regex schema. Request bodies and query parameters are strictly parsed using Zod schemas in [`task.validator.ts`](file:///d:/TaskFlow/server/src/validators/task.validator.ts).
+
+---
+
+## 🧪 Automated Integration Test Suites
+
+Run both test suites via:
+```bash
+npm run test
+```
+
+### 1. Task Management Test Suite (`npm run test:tasks`)
+```text
+====================================================
+ Starting TaskFlow PROMPT 03 Task Management Tests
+====================================================
+  [PASS] 1. Reject Unauthenticated Access to Tasks API (HTTP 401)
+  [PASS] 2. Create Task with Ownership & Ignore Spoofed userId
+  [PASS] 3. Reject Invalid Task Payload via Zod Validation (HTTP 400)
+  [PASS] 4. Retrieve Individual Task by ID (HTTP 200)
+  [PASS] 5. Validate MongoDB ObjectId Format in Params (HTTP 400)
+  [PASS] 6. Edit Task via PUT (HTTP 200)
+  [PASS] 7. Update Task Status via PATCH (HTTP 200)
+  [PASS] 8. Strict Multi-Tenant Data Isolation (No Cross-User Access)
+  [PASS] 9. Title Search (Case-Insensitive Substring)
+  [PASS] 10. Filter by Status (HTTP 200)
+  [PASS] 11. Pagination with Accurate Metadata (page, limit, total, totalPages)
+  [PASS] 12. Combined Search + Filter + Sort + Pagination Query
+  [PASS] 13. Dashboard Statistics Calculation (Total, Statuses, Overdue)
+  [PASS] 14. Dashboard Statistics Scoped to Authenticated User
+  [PASS] 15. Delete Task and Confirm Removal (HTTP 200 -> 404)
+----------------------------------------------------
+ Total: 15 | Passed: 15 | Failed: 0
+====================================================
+```
+
+### 2. Authentication Test Suite (`npm run test:auth`)
 ```text
 ====================================================
  Starting TaskFlow PROMPT 02 Authentication Test Suite
@@ -111,11 +199,6 @@ A dedicated automated test suite (`server/src/tests/auth.test.ts`) verifies all 
 ====================================================
 ```
 
-To run the test suite at any time:
-```bash
-npm run test:auth
-```
-
 ---
 
 ## 🚀 Quick Start Guide
@@ -125,36 +208,15 @@ npm run test:auth
 npm install
 ```
 
-### 2. Run Both Services Concurrently
+### 2. Run All Tests
+```bash
+npm run test
+```
+
+### 3. Run Development Servers Concurrently
 ```bash
 npm run dev
 ```
-- **Frontend App**: `http://localhost:5173`
+- **Frontend**: `http://localhost:5173`
 - **Backend API**: `http://localhost:5000`
-- **Health Check**: `http://localhost:5000/api/v1/health` or `http://localhost:5000/health`
-
-### 3. Individual Service Commands
-```bash
-# Backend development with live reload
-npm run dev:server
-
-# Frontend development server
-npm run dev:client
-
-# Type-check both workspaces
-npm run typecheck
-
-# Build both applications for production
-npm run build
-```
-
----
-
-## 🖥️ Frontend User Interface Pages
-
-- **Home Page (`/`)**: Architecture showcase, security summary, and live telemetry.
-- **Register Page (`/register`)**: Account creation with real-time password strength requirements and instant validation feedback.
-- **Login Page (`/login`)**: Secure sign-in with show/hide password toggle and redirection to intended routes.
-- **Dashboard (`/dashboard`)**: Protected route displaying user profile attributes, session verification badges, and workspace preview.
-- **Diagnostics (`/health`)**: Diagnostic inspection panel for real-time memory, platform, database status, and API round-trip latency.
-- **404 Page (`*`)**: Graceful route recovery.
+- **Health Check**: `http://localhost:5000/api/v1/health`

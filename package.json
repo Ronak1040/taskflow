@@ -15,9 +15,11 @@
     "build:server": "npm run build --workspace=server",
     "build:client": "npm run build --workspace=client",
     "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=client",
-    "test:auth": "npm run test:auth --workspace=server"
+    "test:auth": "npm run test:auth --workspace=server",
+    "test:tasks": "npm run test:tasks --workspace=server",
+    "test": "npm run test:auth --workspace=server && npm run test:tasks --workspace=server"
   },
   "devDependencies": {
-    "concurrently": "^9.2.5"
+    "concurrently": "^9.1.2"
   }
 }

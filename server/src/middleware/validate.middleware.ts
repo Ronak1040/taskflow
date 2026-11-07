@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { AnyZodObject } from 'zod';
+import type { ZodTypeAny } from 'zod';
 
 export interface RequestValidationSchemas {
-  body?: AnyZodObject;
-  query?: AnyZodObject;
-  params?: AnyZodObject;
+  body?: ZodTypeAny;
+  query?: ZodTypeAny;
+  params?: ZodTypeAny;
 }
 
 export function validate(schemas: RequestValidationSchemas) {
@@ -17,7 +17,7 @@ export function validate(schemas: RequestValidationSchemas) {
         req.query = await schemas.query.parseAsync(req.query);
       }
       if (schemas.params) {
-        req.params = await schemas.params.parseAsync(req.params);
+        req.params = (await schemas.params.parseAsync(req.params)) as any;
       }
       next();
     } catch (error) {

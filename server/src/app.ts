@@ -6,6 +6,8 @@ import { env } from './config/env.js';
 import { apiRouter } from './routes/index.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
+import { taskRoutes } from './routes/task.routes.js';
+import { dashboardRoutes } from './routes/dashboard.routes.js';
 import { requestLogger } from './middleware/logger.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
@@ -27,7 +29,7 @@ export function createApp(): Application {
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+        // Allow requests with no origin (e.g., mobile apps, test runners)
         if (!origin) return callback(null, true);
         if (allowedOrigins.includes(origin)) {
           return callback(null, true);
@@ -56,8 +58,10 @@ export function createApp(): Application {
   // Health check routes
   app.use('/health', healthRoutes);
 
-  // Standard Prompt 02 API paths: /api/auth/*
+  // Standard API endpoints
   app.use('/api/auth', authRoutes);
+  app.use('/api/tasks', taskRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
 
   // Versioned API routes: /api/v1/*
   app.use('/api/v1', apiRouter);
