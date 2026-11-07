@@ -14,17 +14,42 @@ export const apiClient = axios.create({
   },
 });
 
-// Response interceptor to format errors uniformly
+// Response interceptor to format errors uniformly and broadcast session expiration
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   (error: AxiosError<{ message?: string; details?: unknown }>) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url || '';
+
+    let message = error.response?.data?.message || error.message || 'An unexpected error occurred';
+    if (status === 403 && !error.response?.data?.message) {
+      message = 'Access forbidden: you do not have permission or CSRF validation failed.';
+    }
+
     const formattedError: ApiError = {
-      message: error.response?.data?.message || error.message || 'An unexpected error occurred',
-      statusCode: error.response?.status,
+      message,
+      statusCode: status,
       details: error.response?.data?.details,
     };
+
+    // If an authenticated endpoint returns 401 (excluding auth check and login/registration),
+    // trigger a global session-expired event so AuthContext immediately clears credentials.
+    if (
+      status === 401 &&
+      !requestUrl.includes('/auth/login') &&
+      !requestUrl.includes('/auth/register') &&
+      !requestUrl.includes('/auth/me')
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('taskflow:session-expired', {
+            detail: { message: formattedError.message },
+          })
+        );
+      }
+    }
 
     return Promise.reject(formattedError);
   }

@@ -30,8 +30,9 @@ export const AppLayout: React.FC = () => {
       await TaskService.createTask(data as CreateTaskPayload);
       toast.success('Task created successfully');
       setIsCreateModalOpen(false);
-      // Trigger a custom event so child pages can re-fetch
+      // Trigger custom events so child pages can re-fetch
       window.dispatchEvent(new CustomEvent('taskflow:task-created'));
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Failed to create task');
     } finally {

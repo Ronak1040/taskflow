@@ -24,12 +24,18 @@ export const HomePage: React.FC = () => {
     <div className="space-y-10 animate-fade-in">
       {/* Hero Section */}
       <div className="text-center max-w-3xl mx-auto space-y-4 pt-4">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Badge variant="info" size="md">
-            PROMPT 01 • Architecture Foundation
+            Full-Stack TypeScript
           </Badge>
           <Badge variant="success" size="md">
-            PROMPT 02 • Complete Authentication
+            HTTP-Only Cookie Auth
+          </Badge>
+          <Badge variant="neutral" size="md">
+            Task Management REST APIs
+          </Badge>
+          <Badge variant="warning" size="md">
+            Modern SaaS Dashboard
           </Badge>
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">

@@ -40,7 +40,8 @@ export const TasksPage: React.FC = () => {
   const [hasPrevPage, setHasPrevPage] = useState<boolean>(false);
 
   // Filters & sorting
-  const [search, setSearch] = useState<string>('');
+  const [searchInput, setSearchInput] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
   const [sortBy, setSortBy] = useState<'dueDate' | 'createdAt' | 'title' | 'priority'>('createdAt');
@@ -56,11 +57,20 @@ export const TasksPage: React.FC = () => {
   const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
+  // Debounce search input to prevent duplicate API requests and race conditions
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     try {
       const response = await TaskService.getTasks({
-        search: search.trim() || undefined,
+        search: debouncedSearch || undefined,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         sortBy,
@@ -81,22 +91,21 @@ export const TasksPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, priorityFilter, sortBy, sortOrder, page, limit]);
+  }, [debouncedSearch, statusFilter, priorityFilter, sortBy, sortOrder, page, limit]);
 
   useEffect(() => {
     void fetchTasks();
 
     const listener = () => void fetchTasks();
     window.addEventListener('taskflow:task-created', listener);
-    return () => window.removeEventListener('taskflow:task-created', listener);
+    window.addEventListener('taskflow:task-changed', listener);
+    return () => {
+      window.removeEventListener('taskflow:task-created', listener);
+      window.removeEventListener('taskflow:task-changed', listener);
+    };
   }, [fetchTasks]);
 
-  // Reset page to 1 when filters or search change
-  const handleSearchChange = (val: string) => {
-    setSearch(val);
-    setPage(1);
-  };
-
+  // Reset page to 1 when filters change
   const handleStatusFilterChange = (val: string) => {
     setStatusFilter(val as TaskStatus | '');
     setPage(1);
@@ -121,6 +130,7 @@ export const TasksPage: React.FC = () => {
       setIsModalOpen(false);
       setTaskToEdit(null);
       void fetchTasks();
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Operation failed');
     } finally {
@@ -134,6 +144,7 @@ export const TasksPage: React.FC = () => {
       await TaskService.updateTaskStatus(task.id, nextStatus);
       toast.success(`Task moved to ${nextStatus}`);
       void fetchTasks();
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Failed to update status');
     }
@@ -148,6 +159,7 @@ export const TasksPage: React.FC = () => {
       toast.success('Task deleted successfully');
       setTaskToDelete(null);
       void fetchTasks();
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete task');
     } finally {
@@ -185,8 +197,8 @@ export const TasksPage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           {/* Search bar */}
           <SearchBar
-            value={search}
-            onChange={handleSearchChange}
+            value={searchInput}
+            onChange={setSearchInput}
             placeholder="Search by title..."
             className="w-full lg:max-w-xs"
           />
@@ -280,14 +292,14 @@ export const TasksPage: React.FC = () => {
           icon={<CheckCircle className="w-8 h-8" />}
           title="No tasks found"
           description={
-            search || statusFilter || priorityFilter
+            searchInput || statusFilter || priorityFilter
               ? 'No tasks match your selected search or filters. Try adjusting them or clear filters.'
               : 'You have no tasks created yet. Click below to add your first item.'
           }
-          actionText={search || statusFilter || priorityFilter ? 'Clear Filters' : 'Create Task'}
+          actionText={searchInput || statusFilter || priorityFilter ? 'Clear Filters' : 'Create Task'}
           onAction={() => {
-            if (search || statusFilter || priorityFilter) {
-              setSearch('');
+            if (searchInput || statusFilter || priorityFilter) {
+              setSearchInput('');
               setStatusFilter('');
               setPriorityFilter('');
             } else {

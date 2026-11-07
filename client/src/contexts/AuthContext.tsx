@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { AuthService } from '../services/authService';
 import type { User, RegisterPayload, LoginPayload, AuthContextType } from '../types/auth';
 import type { ApiError } from '../types/api';
@@ -24,6 +25,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     void checkAuth();
+
+    // Listen for expired sessions from interceptor
+    const handleSessionExpired = (e: Event) => {
+      const customEvent = e as CustomEvent<{ message?: string }>;
+      setUser(null);
+      toast.error(customEvent.detail?.message || 'Session expired. Please log in again.');
+    };
+
+    window.addEventListener('taskflow:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('taskflow:session-expired', handleSessionExpired);
+    };
   }, [checkAuth]);
 
   const login = async (payload: LoginPayload): Promise<void> => {

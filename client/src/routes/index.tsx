@@ -9,6 +9,7 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { TasksPage } from '../pages/TasksPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
+import { PublicRoute } from '../components/auth/PublicRoute';
 
 export const router = createBrowserRouter([
   // Public marketing & auth layout
@@ -26,11 +27,19 @@ export const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: <LoginPage />,
+        element: (
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        ),
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: (
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        ),
       },
     ],
   },

@@ -17,7 +17,8 @@
     "typecheck": "npm run typecheck --workspace=server && npm run typecheck --workspace=client",
     "test:auth": "npm run test:auth --workspace=server",
     "test:tasks": "npm run test:tasks --workspace=server",
-    "test": "npm run test:auth --workspace=server && npm run test:tasks --workspace=server"
+    "test:e2e": "npm run test:e2e --workspace=server",
+    "test": "npm run test:auth --workspace=server && npm run test:tasks --workspace=server && npm run test:e2e --workspace=server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

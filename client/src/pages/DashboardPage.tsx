@@ -44,14 +44,14 @@ export const DashboardPage: React.FC = () => {
           status: 'pending',
           sortBy: 'dueDate',
           order: 'asc',
-          limit: 5,
+          limit: 20,
         }),
       ]);
 
       setStats(statsData);
       setRecentTasks(recentData.tasks);
-      // Filter out tasks without dueDate for upcoming deadlines
-      setUpcomingDeadlines(upcomingData.tasks.filter((t) => Boolean(t.dueDate)));
+      // Filter out tasks without dueDate for upcoming deadlines and take top 5
+      setUpcomingDeadlines(upcomingData.tasks.filter((t) => Boolean(t.dueDate)).slice(0, 5));
     } catch (err: any) {
       toast.error(err.message || 'Failed to load dashboard metrics');
     } finally {
@@ -62,10 +62,14 @@ export const DashboardPage: React.FC = () => {
   useEffect(() => {
     void fetchDashboardData();
 
-    // Listen for global task created events
+    // Listen for global task created/changed events
     const listener = () => void fetchDashboardData();
     window.addEventListener('taskflow:task-created', listener);
-    return () => window.removeEventListener('taskflow:task-created', listener);
+    window.addEventListener('taskflow:task-changed', listener);
+    return () => {
+      window.removeEventListener('taskflow:task-created', listener);
+      window.removeEventListener('taskflow:task-changed', listener);
+    };
   }, [fetchDashboardData]);
 
   const handleCreateTask = async (data: CreateTaskPayload | UpdateTaskPayload) => {
@@ -75,6 +79,7 @@ export const DashboardPage: React.FC = () => {
       toast.success('Task created successfully');
       setIsCreateModalOpen(false);
       void fetchDashboardData();
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Failed to create task');
     } finally {
@@ -87,6 +92,7 @@ export const DashboardPage: React.FC = () => {
       await TaskService.updateTaskStatus(task.id, nextStatus);
       toast.success(`Task status updated to ${nextStatus}`);
       void fetchDashboardData();
+      window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
     } catch (err: any) {
       toast.error(err.message || 'Failed to update task status');
     }
