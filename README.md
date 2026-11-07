@@ -405,6 +405,31 @@ npm run build
 
 ---
 
+## ✨ UI Polish, Product Quality & Accessibility (PROMPT 07)
+
+TaskFlow includes enterprise-grade visual polish, responsive typography, WCAG 2.1 AA accessibility compliance, and refined user experience micro-interactions.
+
+### 1. Key Design Refinements
+- **Interactive Metrics Cards**: Dashboard stat cards feature subtle hover lift (`hover:-translate-y-0.5`), keyboard navigation (`Enter`/`Space`), and 1-click filter navigation to target task states.
+- **Color-Coded Status Borders**: Task cards visually communicate state via border accents (🔴 Overdue: `border-l-rose-500`, 🟢 Completed: `border-l-emerald-500`, 🔵 In-Progress: `border-l-sky-500`, 🟡 Pending: `border-l-amber-400`).
+- **Sprint Completion Velocity Bar**: Real-time progress bar with gradient styling, completion percentage indicator, and queue capacity metrics.
+- **Sticky Table & Zebra Hovering**: `TaskTable` features sticky header styling, subtle row highlighting, and inline status dropdown transitions.
+
+### 2. User Experience Upgrades
+- **Skeleton Loading State Variants**: `LoadingState` supports `type="stat-cards"`, `type="table"`, `type="cards"`, and `type="spinner"`.
+- **Relative Due Date & Overdue Indicators**: Reusable `getRelativeDateInfo` computes human-friendly labels (`Due Today`, `Due Tomorrow`, `Overdue by X days`) with alert icon pills.
+- **Modal Character Counters & Quick Presets**: `TaskModal` displays real-time character counters (`title.length/200`, `description.length/2000`) and 1-click date presets (`Today`, `Tomorrow`, `+1 Week`, `Clear`).
+- **Descriptive Delete Confirmations**: `ConfirmDialog` names the specific item being deleted and disables buttons during action execution.
+- **Active Filter Bar**: Filter chips display active search terms, status, and priority filters with a 1-click `Reset all filters` button.
+
+### 3. Accessibility & Keyboard Navigation (WCAG 2.1 AA)
+- **Universal Visible Focus States**: `focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900` across all interactive elements.
+- **Keyboard Dismissal**: `Escape` key dismisses both `TaskModal` and `ConfirmDialog`; backdrop clicking cleanly cancels modal dialogs.
+- **Accessible Dialogs & Landmarks**: Standardized `role="dialog"`, `role="alertdialog"`, `aria-modal="true"`, `aria-labelledby`, and `aria-describedby` attributes.
+- **Accessible Form Controls**: All inputs feature `<label htmlFor="...">`, `autocomplete`, and screen-reader status indicators.
+
+---
+
 ## 🚀 Quick Start Guide
 
 ### 1. Install Dependencies
