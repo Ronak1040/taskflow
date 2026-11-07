@@ -25,22 +25,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Mobile sidebar toggle button */}
         <button
           onClick={onToggleSidebar}
-          className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer"
           aria-label="Toggle navigation menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {title && (
-          <h1 className="text-base font-bold text-slate-900 dark:text-white truncate">
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
             {title}
           </h1>
         )}
       </div>
 
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2.5 sm:space-x-3">
         {/* Backend Online Pill */}
-        <div className="hidden sm:flex items-center">
+        <div className="hidden sm:flex items-center" aria-label={`System status: ${health?.status || 'checking'}`}>
           {healthLoading ? (
             <Badge variant="neutral" size="sm">
               <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
@@ -49,11 +49,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           ) : health?.status === 'healthy' ? (
             <Badge variant="success" size="sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Online
+              API Online
             </Badge>
           ) : (
             <Badge variant="warning" size="sm">
-              Offline
+              API Offline
             </Badge>
           )}
         </div>
@@ -61,7 +61,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Theme Toggle Button */}
         <button
           onClick={() => setTheme(isDark ? 'light' : 'dark')}
-          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer"
           title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
           aria-label="Toggle color theme"
         >

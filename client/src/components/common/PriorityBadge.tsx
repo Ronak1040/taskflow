@@ -18,31 +18,29 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority, size = '
     medium: {
       label: 'Medium',
       dot: 'bg-amber-500 dark:bg-amber-400',
-      styles: 'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
+      styles: 'bg-amber-50 text-amber-800 border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
     },
     high: {
       label: 'High',
       dot: 'bg-rose-500 dark:bg-rose-400',
-      styles: 'bg-rose-50 text-rose-700 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
+      styles: 'bg-rose-50 text-rose-800 border-rose-200/80 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
     },
   };
 
   const config = configs[priority] || configs.medium;
-
-  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1.5' : 'text-xs px-2.5 py-1 gap-1.5';
+  const sizeClasses = size === 'sm' ? 'text-[11px] px-2 py-0.5 gap-1.5 font-medium' : 'text-xs px-2.5 py-1 gap-1.5 font-medium';
 
   return (
     <span
       className={cn(
-        'inline-flex items-center font-medium rounded-full border shadow-2xs select-none transition-colors',
+        'inline-flex items-center rounded-full border shadow-2xs select-none transition-colors',
         config.styles,
         sizeClasses,
         className
       )}
     >
-      <span className={cn('w-1.5 h-1.5 rounded-full', config.dot)} />
+      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', config.dot, priority === 'high' && 'animate-pulse')} />
       <span>{config.label}</span>
     </span>
   );
 };
-

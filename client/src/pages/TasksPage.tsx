@@ -8,6 +8,8 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  RotateCcw,
+  SlidersHorizontal,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TaskService } from '../services/taskService';
@@ -54,7 +56,7 @@ export const TasksPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Delete dialog state
-  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   // Debounce search input to prevent duplicate API requests and race conditions
@@ -86,8 +88,9 @@ export const TasksPage: React.FC = () => {
         setHasNextPage(response.meta.hasNextPage);
         setHasPrevPage(response.meta.hasPrevPage);
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to retrieve tasks');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to retrieve tasks';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -116,6 +119,17 @@ export const TasksPage: React.FC = () => {
     setPage(1);
   };
 
+  const handleClearAllFilters = () => {
+    setSearchInput('');
+    setStatusFilter('');
+    setPriorityFilter('');
+    setSortBy('createdAt');
+    setSortOrder('desc');
+    setPage(1);
+  };
+
+  const hasActiveFilters = Boolean(searchInput || statusFilter || priorityFilter);
+
   // Create or Update task submit
   const handleModalSubmit = async (data: CreateTaskPayload | UpdateTaskPayload) => {
     setIsSubmitting(true);
@@ -131,8 +145,9 @@ export const TasksPage: React.FC = () => {
       setTaskToEdit(null);
       void fetchTasks();
       window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
-    } catch (err: any) {
-      toast.error(err.message || 'Operation failed');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Operation failed';
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -145,8 +160,9 @@ export const TasksPage: React.FC = () => {
       toast.success(`Task moved to ${nextStatus}`);
       void fetchTasks();
       window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update status');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update status';
+      toast.error(msg);
     }
   };
 
@@ -155,13 +171,14 @@ export const TasksPage: React.FC = () => {
     if (!taskToDelete) return;
     setIsDeleting(true);
     try {
-      await TaskService.deleteTask(taskToDelete);
-      toast.success('Task deleted successfully');
+      await TaskService.deleteTask(taskToDelete.id);
+      toast.success(`"${taskToDelete.title}" deleted successfully`);
       setTaskToDelete(null);
       void fetchTasks();
       window.dispatchEvent(new CustomEvent('taskflow:task-changed'));
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete task');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete task';
+      toast.error(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -170,12 +187,12 @@ export const TasksPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Page Title & Main Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/60 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200/60 dark:border-slate-800">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Task Management
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Organize, filter, and track all tasks across your active workflows
           </p>
         </div>
@@ -193,13 +210,13 @@ export const TasksPage: React.FC = () => {
       </div>
 
       {/* Control Panel: Search, Filters, Sorters, View Switcher */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-2xs">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3.5 shadow-2xs">
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
           {/* Search bar */}
           <SearchBar
             value={searchInput}
             onChange={setSearchInput}
-            placeholder="Search by title..."
+            placeholder="Search tasks by title..."
             className="w-full lg:max-w-xs"
           />
 
@@ -224,6 +241,7 @@ export const TasksPage: React.FC = () => {
               label="Filter by Priority"
               value={priorityFilter}
               onChange={handlePriorityFilterChange}
+              icon={<SlidersHorizontal className="w-3.5 h-3.5" />}
               options={[
                 { value: '', label: 'All Priorities' },
                 { value: 'high', label: 'High Priority' },
@@ -236,7 +254,7 @@ export const TasksPage: React.FC = () => {
             <FilterDropdown
               label="Sort by Field"
               value={sortBy}
-              onChange={(val) => setSortBy(val as any)}
+              onChange={(val) => setSortBy(val as 'dueDate' | 'createdAt' | 'title' | 'priority')}
               icon={<ArrowUpDown className="w-3.5 h-3.5" />}
               options={[
                 { value: 'createdAt', label: 'Sort: Created Date' },
@@ -250,31 +268,38 @@ export const TasksPage: React.FC = () => {
             <button
               onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
               title={`Switch order: currently ${sortOrder.toUpperCase()}`}
-              className="px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              aria-label={`Switch sort order: currently ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
+              className="px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer"
             >
               {sortOrder === 'asc' ? 'Asc ↑' : 'Desc ↓'}
             </button>
 
             {/* View Mode Switcher (Table vs Cards) */}
-            <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/60 ml-auto sm:ml-0">
+            <div
+              role="group"
+              aria-label="View layout switcher"
+              className="flex items-center rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-800/60 ml-auto sm:ml-0"
+            >
               <button
                 onClick={() => setViewMode('table')}
-                aria-label="Table view"
-                className={`p-1.5 rounded-md transition-colors ${
+                aria-label="Switch to table view"
+                aria-pressed={viewMode === 'table'}
+                className={`p-1.5 rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   viewMode === 'table'
-                    ? 'bg-white dark:bg-slate-900 text-brand-600 shadow-2xs font-semibold'
-                    : 'text-slate-400 hover:text-slate-700'
+                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs font-semibold'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 <List className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setViewMode('cards')}
-                aria-label="Card view"
-                className={`p-1.5 rounded-md transition-colors ${
+                aria-label="Switch to card grid view"
+                aria-pressed={viewMode === 'cards'}
+                className={`p-1.5 rounded-md transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
                   viewMode === 'cards'
-                    ? 'bg-white dark:bg-slate-900 text-brand-600 shadow-2xs font-semibold'
-                    : 'text-slate-400 hover:text-slate-700'
+                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-2xs font-semibold'
+                    : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -282,26 +307,57 @@ export const TasksPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Active Filters Bar */}
+        {hasActiveFilters && (
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                Active Filters:
+              </span>
+              {searchInput && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-900 text-[11px]">
+                  Search: &quot;{searchInput}&quot;
+                </span>
+              )}
+              {statusFilter && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px]">
+                  Status: {statusFilter}
+                </span>
+              )}
+              {priorityFilter && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px]">
+                  Priority: {priorityFilter}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={handleClearAllFilters}
+              className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 font-semibold flex items-center gap-1 transition-colors hover:underline cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset all filters
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Task Content: Table or Cards */}
       {loading ? (
-        <LoadingState type="skeleton" rows={5} />
+        <LoadingState type={viewMode === 'table' ? 'table' : 'cards'} rows={5} />
       ) : tasks.length === 0 ? (
         <EmptyState
-          icon={<CheckCircle className="w-8 h-8" />}
+          icon={<CheckCircle className="w-8 h-8 text-slate-400" />}
           title="No tasks found"
           description={
-            searchInput || statusFilter || priorityFilter
-              ? 'No tasks match your selected search or filters. Try adjusting them or clear filters.'
+            hasActiveFilters
+              ? 'No tasks match your selected search or filter criteria. Try broadening your parameters.'
               : 'You have no tasks created yet. Click below to add your first item.'
           }
-          actionText={searchInput || statusFilter || priorityFilter ? 'Clear Filters' : 'Create Task'}
+          actionText={hasActiveFilters ? 'Clear Filters' : 'Create Task'}
           onAction={() => {
-            if (searchInput || statusFilter || priorityFilter) {
-              setSearchInput('');
-              setStatusFilter('');
-              setPriorityFilter('');
+            if (hasActiveFilters) {
+              handleClearAllFilters();
             } else {
               setTaskToEdit(null);
               setIsModalOpen(true);
@@ -315,7 +371,10 @@ export const TasksPage: React.FC = () => {
             setTaskToEdit(t);
             setIsModalOpen(true);
           }}
-          onDelete={(id) => setTaskToDelete(id)}
+          onDelete={(id) => {
+            const match = tasks.find((t) => t.id === id);
+            if (match) setTaskToDelete(match);
+          }}
           onStatusChange={handleStatusChange}
         />
       ) : (
@@ -328,7 +387,10 @@ export const TasksPage: React.FC = () => {
                 setTaskToEdit(t);
                 setIsModalOpen(true);
               }}
-              onDelete={(id) => setTaskToDelete(id)}
+              onDelete={(id) => {
+                const match = tasks.find((t) => t.id === id);
+                if (match) setTaskToDelete(match);
+              }}
               onStatusChange={handleStatusChange}
             />
           ))}
@@ -337,11 +399,11 @@ export const TasksPage: React.FC = () => {
 
       {/* Pagination Controls */}
       {total > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 text-xs text-slate-500 dark:text-slate-400">
           <div>
             Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{(page - 1) * limit + 1}</span> to{' '}
             <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.min(page * limit, total)}</span> of{' '}
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{total}</span> tasks
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{total}</span> total tasks
           </div>
 
           <div className="flex items-center space-x-2">
@@ -351,10 +413,11 @@ export const TasksPage: React.FC = () => {
               disabled={!hasPrevPage || loading}
               onClick={() => setPage(page - 1)}
               leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
+              aria-label="Previous page"
             >
               Previous
             </Button>
-            <span className="px-2 font-medium">
+            <span className="px-3 py-1 rounded-md bg-slate-100 dark:bg-slate-800 font-semibold text-slate-800 dark:text-slate-200 text-xs">
               Page {page} of {totalPages}
             </span>
             <Button
@@ -363,6 +426,7 @@ export const TasksPage: React.FC = () => {
               disabled={!hasNextPage || loading}
               onClick={() => setPage(page + 1)}
               rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
+              aria-label="Next page"
             >
               Next
             </Button>
@@ -386,8 +450,12 @@ export const TasksPage: React.FC = () => {
       <ConfirmDialog
         isOpen={Boolean(taskToDelete)}
         title="Delete Task"
-        message="Are you sure you want to delete this task? This action cannot be undone."
-        confirmText="Delete"
+        message={
+          taskToDelete
+            ? `Are you sure you want to delete "${taskToDelete.title}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this task?'
+        }
+        confirmText="Delete Task"
         cancelText="Cancel"
         isDangerous
         isLoading={isDeleting}
