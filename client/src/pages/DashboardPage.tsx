@@ -320,11 +320,10 @@ export const DashboardPage: React.FC = () => {
                     >
                       <div className="space-y-0.5 truncate max-w-[65%]">
                         <span
-                          className={`font-semibold block truncate leading-snug ${
-                            task.status === 'completed'
+                          className={`font-semibold block truncate leading-snug ${task.status === 'completed'
                               ? 'line-through text-slate-400 dark:text-slate-500'
                               : 'text-slate-900 dark:text-white'
-                          }`}
+                            }`}
                         >
                           {task.title}
                         </span>
@@ -410,8 +409,8 @@ export const DashboardPage: React.FC = () => {
                                 isOverdue
                                   ? 'text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-1'
                                   : dateInfo.isToday
-                                  ? 'text-amber-600 dark:text-amber-400 font-semibold'
-                                  : 'text-slate-500 dark:text-slate-400'
+                                    ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                                    : 'text-slate-500 dark:text-slate-400'
                               }
                             >
                               {isOverdue && <AlertCircle className="w-3 h-3 text-rose-500" />}

@@ -85,7 +85,7 @@ Web security vulnerabilities commonly arise from three areas: storing auth token
 - **HTTP-Only Cookie-Based Authentication**:
   - JWTs are generated on the server using cryptographically signed HMAC SHA-256 and stored in an `httpOnly` cookie (`taskflow_token`).
   - Cookies are configured with `httpOnly: true` (inaccessible to JavaScript, neutralizing XSS token theft), `sameSite: 'lax'` (CSRF defense), and `secure: true` in production environments (HTTPS enforcement).
-  - A custom CSRF protection middleware mandates `X-Requested-With: XMLHttpRequest` and validates the `Origin` header against authorized domains.
+  - A custom CSRF protection middleware validates the `Origin` and `Referer` headers against authorized domains on state-changing requests, complemented by browser `SameSite: 'lax'` cookie isolation and frontend `X-Requested-With: XMLHttpRequest` custom headers.
 - **Cryptographic User-Level Data Isolation (Multi-Tenancy)**:
   - The application adheres to a zero-trust architecture: **client-provided user IDs are never trusted**.
   - All task mutations and queries derive ownership directly from the authenticated JWT token payload (`req.user.id`).

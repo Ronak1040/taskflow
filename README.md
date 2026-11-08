@@ -771,7 +771,7 @@ sequenceDiagram
    - `httpOnly: true`: Completely blocks access from JavaScript.
    - `sameSite: 'lax'`: Shields against Cross-Site Request Forgery (CSRF).
    - `secure: true`: Enforces encrypted HTTPS transmission in production environments.
-2. **CSRF Protection Barrier**: All state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) require the `X-Requested-With: XMLHttpRequest` header and undergo strict Origin header validation.
+2. **CSRF Protection Barrier**: All state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) undergo origin and referer verification via `csrfProtection` middleware (validating against `CORS_ORIGIN`). In addition, the frontend Axios client attaches `X-Requested-With: XMLHttpRequest` and the authentication cookie uses `sameSite: 'lax'` to prevent cross-site request forgery in browsers.
 3. **Session Restoration**: On application initialization, the React `AuthContext` dispatches `GET /api/auth/me`. If the cookie is present and valid, the user's profile state is hydrated without credential re-entry.
 4. **401 Interception & Auto-Logout**: An Axios response interceptor catches `401 Unauthorized` responses and fires a `taskflow:session-expired` event, prompting `AuthContext` to transition the UI to guest mode and present an informative session expiration notice.
 

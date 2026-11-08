@@ -85,6 +85,7 @@ The application was reviewed against the OWASP Top 10 vulnerabilities:
   - `sameSite: 'lax'`: Mitigates Cross-Site Request Forgery (CSRF).
   - `secure: true` in production: Enforces HTTPS encryption.
   - `path: '/'`: Restricts scope to application root.
+- **Stateless Logout Behavior**: Logout (`POST /api/auth/logout`) clears the HTTP-only cookie on the client browser. Because JWTs are stateless and no server-side Redis or database token revocation blacklist is maintained, a previously captured raw token remains cryptographically valid until its 7-day expiration if supplied via the `Authorization: Bearer <token>` header.
 - **Sensitive Data Suppression**: The `password` field has `select: false` in the Mongoose schema. Both `toJSON` and `toObject` transform hooks explicitly delete `ret.password` and `ret.__v`. Verified that zero password hashes leak into API responses.
 
 ### 2. Multi-Tenant Data Isolation (IDOR Prevention)
@@ -98,9 +99,9 @@ The application was reviewed against the OWASP Top 10 vulnerabilities:
 - **Cross-Site Scripting (XSS)**: React 19 automatically escapes all dynamic content rendered into the DOM.
 
 ### 4. CSRF Defense & Request Origin Validation
-- **Dual-Header Verification**: The `csrfProtection` middleware inspects both `Origin` and `Referer` headers on all state-changing HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`).
-- **Whitelist Enforcement**: Requests originating from unauthorized domains are blocked with `403 Forbidden`. Non-browser HTTP clients (testing suites, mobile clients) lacking origins are supported safely.
-- **Custom Header Defense**: The frontend Axios client includes `X-Requested-With: XMLHttpRequest` on all requests.
+- **Origin/Referer Verification**: The `csrfProtection` middleware inspects both `Origin` and `Referer` headers on all state-changing HTTP methods (`POST`, `PUT`, `PATCH`, `DELETE`). Requests bearing an untrusted origin are rejected with `403 Forbidden`.
+- **Browser Protection Boundary**: Modern browsers enforce `SameSite: 'lax'` on the auth cookie, which prevents cookies from being attached to cross-origin form POSTs. The frontend Axios client includes `X-Requested-With: XMLHttpRequest`.
+- **Nuance & Limitations**: The backend middleware allows requests where both `Origin` and `Referer` are omitted (permitting non-browser clients, cURL, and mobile integrations). It does not implement Anti-CSRF synchronizer tokens or strictly enforce the `X-Requested-With` header on cookie-authenticated requests.
 
 ### 5. Rate Limiting & DoS Protection
 - **Auth Endpoint Limiting (`authLimiter`)**: Capped at 20 attempts per 15-minute window per IP to prevent brute-force dictionary attacks.
@@ -141,7 +142,7 @@ taskSchema.index({ userId: 1, dueDate: 1 });            // Deadline sorting & up
 taskSchema.index({ userId: 1, status: 1, dueDate: 1 });  // Overdue count aggregation
 taskSchema.index({ userId: 1, title: 1 });              // Title substring searches
 ```
-*Audit Finding: All dashboard count queries and task filter queries execute via covered index scans with zero full-collection scans.*
+*Audit Finding: All dashboard count queries and task filter queries execute via index scans (`IXSCAN`) with zero full-collection scans (`COLLSCAN`). Full task retrieval queries perform index-backed document fetches (`IXSCAN` + `FETCH`), while index-only projections execute as genuine covered queries (`PROJECTION_COVERED`).*
 
 ---
 
@@ -242,3 +243,4 @@ TaskFlow demonstrates exceptional engineering rigor, clean modular separation of
 *Signed,*  
 **Independent Principal Software Engineer & QA Lead**  
 November 2026
+
