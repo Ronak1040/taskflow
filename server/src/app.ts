@@ -12,6 +12,7 @@ import { requestLogger } from './middleware/logger.middleware.js';
 import { notFoundHandler } from './middleware/notFound.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { csrfProtection } from './middleware/csrf.middleware.js';
+import { apiLimiter } from './middleware/rateLimit.middleware.js';
 
 export function createApp(): Application {
   const app = express();
@@ -57,6 +58,9 @@ export function createApp(): Application {
 
   // Health check routes
   app.use('/health', healthRoutes);
+
+  // Rate limiting across all REST API endpoints
+  app.use('/api', apiLimiter);
 
   // Standard API endpoints
   app.use('/api/auth', authRoutes);

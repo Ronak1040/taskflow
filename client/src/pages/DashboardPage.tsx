@@ -45,7 +45,6 @@ export const DashboardPage: React.FC = () => {
         DashboardService.getStats(),
         TaskService.getTasks({ sortBy: 'createdAt', order: 'desc', limit: 5 }),
         TaskService.getTasks({
-          status: 'pending',
           sortBy: 'dueDate',
           order: 'asc',
           limit: 20,
@@ -54,8 +53,12 @@ export const DashboardPage: React.FC = () => {
 
       setStats(statsData);
       setRecentTasks(recentData.tasks);
-      // Filter out tasks without dueDate for upcoming deadlines and take top 5
-      setUpcomingDeadlines(upcomingData.tasks.filter((t) => Boolean(t.dueDate)).slice(0, 5));
+      // Filter for active (non-completed) tasks with dueDate for upcoming deadlines and take top 5
+      setUpcomingDeadlines(
+        upcomingData.tasks
+          .filter((t) => Boolean(t.dueDate) && t.status !== 'completed')
+          .slice(0, 5)
+      );
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load dashboard metrics';
       toast.error(errorMsg);
