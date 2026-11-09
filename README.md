@@ -171,7 +171,6 @@ TaskFlow/
 │   ├── tsconfig.json                       # Strict NodeNext TypeScript configuration
 │   └── vitest.config.ts                    # Backend Vitest runner configuration
 │
-├── Assessment-Explanation.md               # Technical assessment decisions & exclusions document
 ├── eslint.config.js                        # Unified ESLint 9 flat configuration
 ├── package.json                            # Monorepo workspace configuration & root scripts
 └── README.md                               # Complete system documentation
@@ -887,10 +886,6 @@ npm run build
 ---
 
 ## 16. Known Limitations & Technical Decisions
-
-For an in-depth architectural breakdown prepared specifically for the technical hiring committee at **Hammoq Infosystems Pvt. Ltd.**, please refer to the companion document:
-
-👉 [**Assessment-Explanation.md**](file:///d:/TaskFlow/Assessment-Explanation.md)
 
 ### Summary of Architectural Decisions:
 1. **Full-Stack TypeScript & MERN**: Guarantees end-to-end type safety, shared domain interfaces, sub-millisecond index queries, and zero impedance mismatch between client and server.
